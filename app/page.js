@@ -121,111 +121,128 @@ const CSVEarningsCalculator = () => {
   };
 
   return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-800 flex items-center justify-center p-4">
-        <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl p-8 max-w-2xl w-full">
-          <div className="text-center mb-8">
-            <div className="flex justify-center mb-4">
-              <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-3 rounded-full">
-                <DollarSign className="w-8 h-8 text-white" />
-              </div>
-            </div>
-            <h1 className="text-4xl font-bold text-gray-800 mb-2">
-              Today's Connect Earnings
-            </h1>
-            <p className="text-gray-600 text-lg">{getCurrentDate()}</p>
-          </div>
-
-          <div
-              className={`border-3 border-dashed rounded-2xl p-12 mb-8 text-center transition-all duration-300 cursor-pointer hover:border-purple-500 hover:bg-purple-50 ${
-                  isDragOver
-                      ? 'border-green-500 bg-green-50'
-                      : 'border-blue-400 bg-blue-50'
-              }`}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
+    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-800 flex items-center justify-center p-4">
+      <div className="absolute top-0 left-0 w-full flex justify-between items-center px-8 py-5 bg-white/80 backdrop-blur-md shadow-md z-10">
+        <div className="text-2xl font-bold text-blue-700 tracking-tight">Daily Earnings</div>
+        <nav className="flex gap-8">
+          <a
+            href="/"
+            className="text-lg font-medium text-blue-700 hover:text-purple-700 transition-colors"
           >
-            <div className="flex flex-col items-center">
-              <Upload className="w-16 h-16 text-blue-500 mb-4" />
-              <h3 className="text-xl font-semibold text-gray-700 mb-2">
-                Upload Your CSV File
-              </h3>
-              <p className="text-gray-500 mb-4">
-                Drag and drop your CSV file here, or click to browse
-              </p>
-              <p className="text-sm text-gray-400">
-                CSV should contain: Payment Received, Payment Pending, Amount Bonused
-              </p>
+            Connect
+          </a>
+          <a
+            href="/prolific"
+            className="text-lg font-medium text-blue-700 hover:text-purple-700 transition-colors"
+          >
+            Prolific
+          </a>
+        </nav>
+      </div>
+      <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl p-8 max-w-2xl w-full mt-24">
+        <div className="text-center mb-8">
+          <div className="flex justify-center mb-4">
+            <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-3 rounded-full">
+              <DollarSign className="w-8 h-8 text-white" />
             </div>
           </div>
+          <h1 className="text-4xl font-bold text-gray-800 mb-2">
+            Today's Connect Earnings
+          </h1>
+          <p className="text-gray-600 text-lg">{getCurrentDate()}</p>
+        </div>
 
-          <input
-              ref={fileInputRef}
-              type="file"
-              accept=".csv"
-              onChange={handleFileSelect}
-              className="hidden"
-          />
-
-          {isLoading && (
-              <div className="text-center py-8">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                <p className="mt-4 text-gray-600">Processing your CSV file...</p>
-              </div>
-          )}
-
-          {error && (
-              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-6">
-                <div className="flex items-center">
-                  <FileText className="w-5 h-5 mr-2" />
-                  {error}
-                </div>
-              </div>
-          )}
-
-          {earnings !== null && (
-              <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-8 text-white transform transition-all duration-500 hover:scale-105">
-                <div className="text-center">
-                  <div className="flex justify-center mb-4">
-                    <TrendingUp className="w-12 h-12" />
-                  </div>
-                  <h2 className="text-2xl font-semibold mb-2">Total Earnings</h2>
-                  <div className="text-5xl font-bold mb-6">
-                    {formatCurrency(earnings)}
-                  </div>
-
-                  {breakdown && (
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-                        <div className="bg-white/20 rounded-lg p-4">
-                          <h3 className="font-semibold mb-2">Payment Received</h3>
-                          <p className="text-2xl font-bold">
-                            {formatCurrency(breakdown.received)}
-                          </p>
-                        </div>
-                        <div className="bg-white/20 rounded-lg p-4">
-                          <h3 className="font-semibold mb-2">Payment Pending</h3>
-                          <p className="text-2xl font-bold">
-                            {formatCurrency(breakdown.pending)}
-                          </p>
-                        </div>
-                        <div className="bg-white/20 rounded-lg p-4">
-                          <h3 className="font-semibold mb-2">Amount Bonused</h3>
-                          <p className="text-2xl font-bold">
-                            {formatCurrency(breakdown.bonused)}
-                          </p>
-                        </div>
-                      </div>
-                  )}
-                </div>
-              </div>
-          )}
-
-          <div className="mt-8 text-center text-gray-500 text-sm">
-            <p>Upload a new CSV file to calculate updated earnings</p>
+        <div
+            className={`border-3 border-dashed rounded-2xl p-12 mb-8 text-center transition-all duration-300 cursor-pointer hover:border-purple-500 hover:bg-purple-50 ${
+                isDragOver
+                    ? 'border-green-500 bg-green-50'
+                    : 'border-blue-400 bg-blue-50'
+            }`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()}
+        >
+          <div className="flex flex-col items-center">
+            <Upload className="w-16 h-16 text-blue-500 mb-4" />
+            <h3 className="text-xl font-semibold text-gray-700 mb-2">
+              Upload Your CSV File
+            </h3>
+            <p className="text-gray-500 mb-4">
+              Drag and drop your CSV file here, or click to browse
+            </p>
+            <p className="text-sm text-gray-400">
+              CSV should contain: Payment Received, Payment Pending, Amount Bonused
+            </p>
           </div>
         </div>
+
+        <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv"
+            onChange={handleFileSelect}
+            className="hidden"
+        />
+
+        {isLoading && (
+            <div className="text-center py-8">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <p className="mt-4 text-gray-600">Processing your CSV file...</p>
+            </div>
+        )}
+
+        {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-6">
+              <div className="flex items-center">
+                <FileText className="w-5 h-5 mr-2" />
+                {error}
+              </div>
+            </div>
+        )}
+
+        {earnings !== null && (
+            <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-8 text-white transform transition-all duration-500 hover:scale-105">
+              <div className="text-center">
+                <div className="flex justify-center mb-4">
+                  <TrendingUp className="w-12 h-12" />
+                </div>
+                <h2 className="text-2xl font-semibold mb-2">Total Earnings</h2>
+                <div className="text-5xl font-bold mb-6">
+                  {formatCurrency(earnings)}
+                </div>
+
+                {breakdown && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                      <div className="bg-white/20 rounded-lg p-4">
+                        <h3 className="font-semibold mb-2">Payment Received</h3>
+                        <p className="text-2xl font-bold">
+                          {formatCurrency(breakdown.received)}
+                        </p>
+                      </div>
+                      <div className="bg-white/20 rounded-lg p-4">
+                        <h3 className="font-semibold mb-2">Payment Pending</h3>
+                        <p className="text-2xl font-bold">
+                          {formatCurrency(breakdown.pending)}
+                        </p>
+                      </div>
+                      <div className="bg-white/20 rounded-lg p-4">
+                        <h3 className="font-semibold mb-2">Amount Bonused</h3>
+                        <p className="text-2xl font-bold">
+                          {formatCurrency(breakdown.bonused)}
+                        </p>
+                      </div>
+                    </div>
+                )}
+              </div>
+            </div>
+        )}
+
+        <div className="mt-8 text-center text-gray-500 text-sm">
+          <p>Upload a new CSV file to calculate updated earnings</p>
+        </div>
       </div>
+    </div>
   );
 };
 
