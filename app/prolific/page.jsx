@@ -158,11 +158,17 @@ const StudyEarningsCalculator = () => {
     }
     const startedAtStr = startedAt.toString().trim();
 
-    // If Started At is only a time (no date), treat as today
-    if (/^\d{1,2}:\d{2}(\.\d+)?$/.test(startedAtStr)) {
+    // If Started At is only a time (e.g. "20:08.6", "56:12.3", "28:28.3"), treat as today
+    if (/^\d{1,2,}:\d{2}(\.\d+)?$/.test(startedAtStr)) {
       return true;
     }
 
+    // If Started At is only seconds (e.g. "44.3"), treat as today
+    if (/^\d+(\.\d+)?$/.test(startedAtStr)) {
+      return true;
+    }
+
+    // Otherwise, parse as usual
     let parsedDate = new Date(startedAtStr);
     if (isNaN(parsedDate.getTime())) {
       parsedDate = parseDateFlexible(startedAtStr);
