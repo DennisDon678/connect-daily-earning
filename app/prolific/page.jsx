@@ -126,6 +126,16 @@ const StudyEarningsCalculator = () => {
     let parsed = new Date(dateStr);
     if (!isNaN(parsed.getTime())) return parsed;
 
+    // Try 7/13/2025 10:20:09 PM (M/D/YYYY h:mm:ss AM/PM)
+    const ampmMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4}) (\d{1,2}):(\d{2})(?::(\d{2}))? ?([AP]M)$/i);
+    if (ampmMatch) {
+      let [, m, d, y, h, min, s = '0', ampm] = ampmMatch;
+      h = parseInt(h, 10);
+      if (ampm.toUpperCase() === 'PM' && h !== 12) h += 12;
+      if (ampm.toUpperCase() === 'AM' && h === 12) h = 0;
+      return new Date(`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}T${h.toString().padStart(2, '0')}:${min.padStart(2, '0')}:${s.padStart(2, '0')}`);
+    }
+
     // Try DD/MM/YYYY HH:mm or DD/MM/YYYY
     const match = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[ T](\d{1,2}):(\d{2}))?/);
     if (match) {
@@ -147,10 +157,17 @@ const StudyEarningsCalculator = () => {
       return false;
     }
     const startedAtStr = startedAt.toString().trim();
+
+    // If Started At is only a time (no date), treat as today
+    if (/^\d{1,2}:\d{2}(\.\d+)?$/.test(startedAtStr)) {
+      return true;
+    }
+
     let parsedDate = new Date(startedAtStr);
     if (isNaN(parsedDate.getTime())) {
       parsedDate = parseDateFlexible(startedAtStr);
       if (!parsedDate || isNaN(parsedDate.getTime())) {
+        console.warn('Could not parse date:', startedAtStr);
         return false;
       }
     }
@@ -170,14 +187,24 @@ const StudyEarningsCalculator = () => {
     // Filter studies started today with valid statuses
     const validStudiesFiltered = studyData.filter(study => {
       const status = (study.Status || '').toString().toUpperCase().trim();
-      
+
       const isValidStatus = status !== 'TIMED-OUT' && 
                           status !== 'RETURNED' && 
                           status !== 'REJECTED' &&
                           status !== '';
-      
+
       const isStartedToday = isStudyStartedToday(study, todayDateString);
-      
+
+      // Debug log for each study
+      console.log({
+        study: study.Study,
+        status,
+        startedAt: study['Started At'],
+        isValidStatus,
+        isStartedToday,
+        included: isValidStatus && isStartedToday
+      });
+
       return isValidStatus && isStartedToday;
     });
 
