@@ -120,20 +120,40 @@ const StudyEarningsCalculator = () => {
     }
   };
 
+  // Add this helper above isStudyStartedToday
+  const parseDateFlexible = (dateStr) => {
+    // Try native Date first
+    let parsed = new Date(dateStr);
+    if (!isNaN(parsed.getTime())) return parsed;
+
+    // Try DD/MM/YYYY HH:mm or DD/MM/YYYY
+    const match = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[ T](\d{1,2}):(\d{2}))?/);
+    if (match) {
+      const [, d, m, y, h = '0', min = '0'] = match;
+      return new Date(`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}T${h.padStart(2, '0')}:${min.padStart(2, '0')}:00`);
+    }
+    // Try MM/DD/YYYY HH:mm or MM/DD/YYYY
+    const matchUS = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[ T](\d{1,2}):(\d{2}))?/);
+    if (matchUS) {
+      const [, m, d, y, h = '0', min = '0'] = matchUS;
+      return new Date(`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}T${h.padStart(2, '0')}:${min.padStart(2, '0')}:00`);
+    }
+    return null;
+  };
+
   const isStudyStartedToday = (study, todayDateString) => {
     const startedAt = study['Started At'];
-    
     if (!startedAt || startedAt.toString().trim() === '') {
       return false;
     }
-    
     const startedAtStr = startedAt.toString().trim();
-    const parsedDate = new Date(startedAtStr);
-    
+    let parsedDate = new Date(startedAtStr);
     if (isNaN(parsedDate.getTime())) {
-      return false;
+      parsedDate = parseDateFlexible(startedAtStr);
+      if (!parsedDate || isNaN(parsedDate.getTime())) {
+        return false;
+      }
     }
-    
     const studyDateString = parsedDate.toISOString().split('T')[0];
     return studyDateString === todayDateString;
   };
