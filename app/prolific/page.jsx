@@ -159,7 +159,7 @@ const StudyEarningsCalculator = () => {
     const startedAtStr = startedAt.toString().trim();
 
     // If Started At is only a time (e.g. "20:08.6", "56:12.3", "28:28.3"), treat as today
-    if (/^\d{1,2,}:\d{2}(\.\d+)?$/.test(startedAtStr)) {
+    if (/^\d{1,2}:\d{2}(\.\d+)?$/.test(startedAtStr)) {
       return true;
     }
 
@@ -168,17 +168,15 @@ const StudyEarningsCalculator = () => {
       return true;
     }
 
-    // Otherwise, parse as usual
+    // If Started At is a full date string, check if it matches today
     let parsedDate = new Date(startedAtStr);
-    if (isNaN(parsedDate.getTime())) {
-      parsedDate = parseDateFlexible(startedAtStr);
-      if (!parsedDate || isNaN(parsedDate.getTime())) {
-        console.warn('Could not parse date:', startedAtStr);
-        return false;
-      }
+    if (!isNaN(parsedDate.getTime())) {
+      const studyDateString = parsedDate.toISOString().split('T')[0];
+      return studyDateString === todayDateString;
     }
-    const studyDateString = parsedDate.toISOString().split('T')[0];
-    return studyDateString === todayDateString;
+
+    // If parsing fails, do not include
+    return false;
   };
 
   const calculateEarnings = () => {
