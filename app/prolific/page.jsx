@@ -120,22 +120,54 @@ const StudyEarningsCalculator = () => {
     }
   };
 
+  const getBrowserTimezoneOffset = () => {
+    // Returns offset in minutes, e.g. -120 for UTC+2
+    return new Date().getTimezoneOffset();
+  };
+
   const isStudyStartedToday = (study, todayDateString) => {
     const startedAt = study['Started At'];
-    
     if (!startedAt || startedAt.toString().trim() === '') {
       return false;
     }
-    
     const startedAtStr = startedAt.toString().trim();
-    const parsedDate = new Date(startedAtStr);
-    
-    if (isNaN(parsedDate.getTime())) {
-      return false;
+
+    // If Started At is only a time (e.g. "01:32.9"), combine with today's date
+    if (/^\d{1,2}:\d{2}(\.\d+)?$/.test(startedAtStr)) {
+      // Use today's date and the time from the field
+      const dateTimeStr = `${todayDateString} ${startedAtStr}`;
+      // Parse as local time
+      const localDate = new Date(dateTimeStr);
+      if (isNaN(localDate.getTime())) return false;
+      const localDateString = localDate.toISOString().split('T')[0];
+      return localDateString === todayDateString;
     }
-    
-    const studyDateString = parsedDate.toISOString().split('T')[0];
-    return studyDateString === todayDateString;
+
+    // If Started At is a full date string, parse and convert to browser timezone
+    // Example: "7/15/2025 1:01:33 AM"
+    let parsedDate = new Date(startedAtStr);
+    if (isNaN(parsedDate.getTime())) {
+      // Try to parse manually if needed
+      const match = startedAtStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4}) (\d{1,2}):(\d{2}):(\d{2}) ?([AP]M)?$/i);
+      if (match) {
+        let [, m, d, y, h, min, s, ampm] = match;
+        h = parseInt(h, 10);
+        if (ampm) {
+          if (ampm.toUpperCase() === 'PM' && h !== 12) h += 12;
+          if (ampm.toUpperCase() === 'AM' && h === 12) h = 0;
+        }
+        parsedDate = new Date(`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}T${h.toString().padStart(2, '0')}:${min}:${s}`);
+      }
+    }
+    if (isNaN(parsedDate.getTime())) return false;
+
+    // Convert to browser's local time zone
+    const browserOffset = getBrowserTimezoneOffset();
+    const utcDate = new Date(parsedDate.getTime() - (parsedDate.getTimezoneOffset() * 60000));
+    const localDate = new Date(utcDate.getTime() - (browserOffset * 60000));
+    const localDateString = localDate.toISOString().split('T')[0];
+
+    return localDateString === todayDateString;
   };
 
   const calculateEarnings = () => {
