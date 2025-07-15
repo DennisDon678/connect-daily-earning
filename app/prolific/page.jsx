@@ -53,12 +53,12 @@ const StudyEarningsCalculator = () => {
 
   const parseCSV = useCallback((file) => {
     const reader = new FileReader();
-    
+
     reader.onload = (e) => {
       try {
         const text = e.target.result;
         const parsedData = parseCSVManually(text);
-        
+
         // Clean up headers by trimming whitespace
         const cleanedData = parsedData.map(row => {
           const cleanRow = {};
@@ -68,7 +68,7 @@ const StudyEarningsCalculator = () => {
           });
           return cleanRow;
         });
-        
+
         setStudyData(cleanedData);
         hideMessages();
         showInfo(`✅ CSV file loaded successfully! Found ${cleanedData.length} studies.`);
@@ -108,7 +108,7 @@ const StudyEarningsCalculator = () => {
   const handleFileDrop = (event) => {
     event.preventDefault();
     setIsDragging(false);
-    
+
     const files = event.dataTransfer.files;
     if (files.length > 0) {
       const file = files[0];
@@ -134,17 +134,28 @@ const StudyEarningsCalculator = () => {
 
     // If Started At is only a time (e.g. "01:32.9"), combine with today's date
     if (/^\d{1,2}:\d{2}(\.\d+)?$/.test(startedAtStr)) {
-      // Use today's date and the time from the field
-      const dateTimeStr = `${todayDateString} ${startedAtStr}`;
-      // Parse as local time
+      const dateTimeStr = `${todayDateString}T${startedAtStr.padStart(8, '0')}`;
       const localDate = new Date(dateTimeStr);
       if (isNaN(localDate.getTime())) return false;
       const localDateString = localDate.toISOString().split('T')[0];
       return localDateString === todayDateString;
     }
 
+    // If Started At is in format "2025-07-15 01:01:32.898000" (UTC)
+    const isoMatch = startedAtStr.match(/^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})(\.\d+)?$/);
+    if (isoMatch) {
+      const [, datePart, timePart] = isoMatch;
+      // Treat as UTC, then convert to browser local time
+      const utcString = `${datePart}T${timePart}Z`;
+      const utcDate = new Date(utcString);
+      if (isNaN(utcDate.getTime())) return false;
+      // Compare local date (browser time zone) to today
+      const localDateString = utcDate.toLocaleDateString('en-CA'); // 'YYYY-MM-DD'
+      const browserDateString = new Date().toLocaleDateString('en-CA');
+      return localDateString === browserDateString;
+    }
+
     // If Started At is a full date string, parse and convert to browser timezone
-    // Example: "7/15/2025 1:01:33 AM"
     let parsedDate = new Date(startedAtStr);
     if (isNaN(parsedDate.getTime())) {
       // Try to parse manually if needed
@@ -161,13 +172,10 @@ const StudyEarningsCalculator = () => {
     }
     if (isNaN(parsedDate.getTime())) return false;
 
-    // Convert to browser's local time zone
-    const browserOffset = getBrowserTimezoneOffset();
-    const utcDate = new Date(parsedDate.getTime() - (parsedDate.getTimezoneOffset() * 60000));
-    const localDate = new Date(utcDate.getTime() - (browserOffset * 60000));
-    const localDateString = localDate.toISOString().split('T')[0];
-
-    return localDateString === todayDateString;
+    // Compare local date (browser time zone) to today
+    const localDateString = parsedDate.toLocaleDateString('en-CA');
+    const browserDateString = new Date().toLocaleDateString('en-CA');
+    return localDateString === browserDateString;
   };
 
   const calculateEarnings = () => {
@@ -178,21 +186,40 @@ const StudyEarningsCalculator = () => {
 
     const today = new Date();
     const todayDateString = today.toISOString().split('T')[0];
-    
+
     // Filter studies started today with valid statuses
-    const validStudiesFiltered = studyData.filter(study => {
+    let validStudiesFiltered = studyData.filter(study => {
       const status = (study.Status || '').toString().toUpperCase().trim();
-      
-      const isValidStatus = status !== 'TIMED-OUT' && 
-                          status !== 'RETURNED' && 
-                          status !== 'REJECTED' &&
-                          status !== '';
-      
+
+      const isValidStatus = status !== 'TIMED-OUT' &&
+        status !== 'RETURNED' &&
+        status !== 'REJECTED' &&
+        status !== 'SCREENED-OUT' &&
+        status !== 'SCREENED OUT' &&
+        status !== '';
+
       const isStartedToday = isStudyStartedToday(study, todayDateString);
-      
+
       return isValidStatus && isStartedToday;
     });
 
+    const screenedOutStudies = studyData.filter(study => {
+      const status = (study.Status || '').toString().toUpperCase().trim();
+
+      const isStartedToday = isStudyStartedToday(study, todayDateString);
+      // Only include studies that are screened out and started today
+      if (!isStartedToday) return false;
+      return status === 'SCREENED-OUT' || status === 'SCREENED OUT';
+    });
+
+    if (screenedOutStudies.length > 0) {
+      // add the screened out studies to the valid studies but reward as 0
+      screenedOutStudies.forEach(study => {
+        const newStudy = { ...study, Reward: '0' };
+        validStudiesFiltered.push(newStudy);
+      });
+    }
+   
     let totalUSDRewards = 0;
     let totalGBPRewards = 0;
     let totalUSDBonuses = 0;
@@ -217,8 +244,12 @@ const StudyEarningsCalculator = () => {
       }
     });
 
+
+
     const totalUSDFromGBP = (totalGBPRewards + totalGBPBonuses) * conversionRate;
     const totalEarningsUSD = totalUSDRewards + totalUSDBonuses + totalUSDFromGBP;
+
+
 
     const calculatedResults = {
       totalStudies: studyData.length,
@@ -232,7 +263,7 @@ const StudyEarningsCalculator = () => {
 
     setResults(calculatedResults);
     setValidStudies(validStudiesFiltered);
-    
+
     if (validStudiesFiltered.length === 0) {
       showInfo('No valid studies found that were started today. This could be because:\n- No studies were started today\n- All studies have invalid statuses (TIMED-OUT, RETURNED, REJECTED)\n- The "Started At" column is missing or has invalid dates');
     } else {
@@ -247,6 +278,9 @@ const StudyEarningsCalculator = () => {
     if (statusLower.includes('returned') || statusLower.includes('rejected') || statusLower.includes('timed')) return 'bg-red-100 text-red-800';
     return 'bg-gray-100 text-gray-800';
   };
+
+  // Add this inside your component, before the return statement
+  const browserTime = new Date().toLocaleString();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-600 via-purple-600 to-purple-800 p-4">
@@ -270,6 +304,11 @@ const StudyEarningsCalculator = () => {
       </div>
       <div className="max-w-7xl mx-auto">
         <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl p-8 mt-24">
+          {/* Display browser time */}
+          <div className="mb-4 text-right text-sm text-gray-500">
+            Browser Local Time: <span className="font-mono">{browserTime}</span>
+          </div>
+
           {/* Header */}
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-2">
@@ -279,12 +318,11 @@ const StudyEarningsCalculator = () => {
           </div>
 
           {/* Upload Section */}
-          <div 
-            className={`border-2 border-dashed rounded-2xl p-8 text-center mb-8 transition-all duration-300 ${
-              isDragging 
-                ? 'border-indigo-500 bg-indigo-50 scale-105' 
+          <div
+            className={`border-2 border-dashed rounded-2xl p-8 text-center mb-8 transition-all duration-300 ${isDragging
+                ? 'border-indigo-500 bg-indigo-50 scale-105'
                 : 'border-gray-300 bg-gray-50 hover:border-indigo-400 hover:bg-indigo-50'
-            }`}
+              }`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleFileDrop}
